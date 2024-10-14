@@ -15,7 +15,7 @@ const App = () => {
     const fetchAndStoreNews = async () => {
       try {
         // Fetch Tesla News
-        const teslaNews = await fetchTeslaNews(); // Use the correct function
+        const teslaNews = await fetchTeslaNews(); 
         if (teslaNews.length > 0) {
           await storeNews(teslaNews, 'teslaNews');
         }
@@ -26,7 +26,6 @@ const App = () => {
           await storeNews(appleNews, 'appleNews');
         }
 
-        // Alert if no news fetched
         if (teslaNews.length === 0 && appleNews.length === 0) {
           Alert.alert(
             "Network Error",

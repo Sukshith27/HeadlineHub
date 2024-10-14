@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator } fr
 import { FlatList, Swipeable } from 'react-native-gesture-handler';
 import { getStoredNews, storeNews, fetchNews } from '../utils/newsUtils';
 
-
 const NewsFeedScreen = () => {
   const [headlines, setHeadlines] = useState([]);
   const [displayedHeadlines, setDisplayedHeadlines] = useState([]);
@@ -68,37 +67,55 @@ const NewsFeedScreen = () => {
   const pinHeadline = (headline) => {
     if (!pinnedHeadlines.includes(headline)) {
       setPinnedHeadlines(prevPinned => [headline, ...prevPinned]);
-      setDisplayedHeadlines(prevHeadlines => [headline, ...prevHeadlines.filter(h => h !== headline)]);
+      setDisplayedHeadlines(prevHeadlines => prevHeadlines.filter(h => h !== headline));
     }
   };
 
   const renderRightActions = (headline) => {
     return (
       <View style={styles.rightActions}>
-        <TouchableOpacity style={styles.deleteAction} onPress={() => deleteHeadline(headline)}>
+        <TouchableOpacity style={[styles.actionButton, styles.deleteButton]} onPress={() => deleteHeadline(headline)}>
+          <Text style={styles.actionIcon}>🗑️</Text>
           <Text style={styles.actionText}>Delete</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.pinAction} onPress={() => pinHeadline(headline)}>
+        <TouchableOpacity style={[styles.actionButton, styles.pinButton]} onPress={() => pinHeadline(headline)}>
+          <Text style={styles.actionIcon}>📌</Text>
           <Text style={styles.actionText}>Pin</Text>
         </TouchableOpacity>
       </View>
     );
   };
 
-  const renderItem = ({ item }) => (
+  const renderItem = ({ item, index }) => (
     <Swipeable renderRightActions={() => renderRightActions(item)}>
       <View style={[styles.headlineItem, pinnedHeadlines.includes(item) && styles.pinnedItem]}>
+        {pinnedHeadlines.includes(item) && (
+          <View style={styles.pinnedIndicator}>
+            <Text style={styles.pinnedIcon}>📌</Text>
+            <Text style={styles.pinnedText}>Pinned to top</Text>
+          </View>
+        )}
         <View style={styles.headlineTop}>
           <View style={styles.sourceContainer}>
-            <Image source={{ uri: item.urlToImage }} style={styles.sourceImage} />
+            {item.urlToImage ? (
+              <Image source={{ uri: item.urlToImage }} style={styles.sourceImage} />
+            ) : (
+              <View style={[styles.sourceImage, styles.placeholderImage]} />
+            )}
             <Text style={styles.sourceName}>{item.source?.name || 'Unknown Source'}</Text>
           </View>
           <Text style={styles.publishTime}>{new Date(item.publishedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
         </View>
-        <Text style={styles.headlineTitle}>{item.title || '[Removed]'}</Text>
         <View style={styles.headlineBottom}>
-          <Text style={styles.authorName}>{item.author || 'Unknown Author'}</Text>
-          <Image source={{ uri: item.urlToImage }} style={styles.newsImage} />
+          <View style={styles.headlineContent}>
+            <Text style={styles.headlineTitle}>{item.title}</Text>
+            <Text style={styles.authorName}>{item.author || 'Unknown Author'}</Text>
+          </View>
+          {item.urlToImage ? (
+            <Image source={{ uri: item.urlToImage }} style={styles.newsImage} />
+          ) : (
+            <View style={[styles.newsImage, styles.placeholderImage]} />
+          )}
         </View>
       </View>
     </Swipeable>
@@ -128,11 +145,11 @@ const NewsFeedScreen = () => {
       <View style={styles.header}>
         <Image source={{uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT6ErXslxNBqSl59aj-Eu-HSQkP9A6ePPJCjA&s"}} style={styles.logo} />
         <TouchableOpacity onPress={refreshNewsFeed} style={styles.refreshButton}>
-          <Text style={styles.refreshIcon}>↻</Text>
+          <Text style={styles.refreshIcon}>🔄</Text>
         </TouchableOpacity>
       </View>
       <FlatList
-        data={displayedHeadlines}
+        data={[...pinnedHeadlines, ...displayedHeadlines.filter(h => !pinnedHeadlines.includes(h))]}
         renderItem={renderItem}
         keyExtractor={(item, index) => `${item.title}-${index}`}
         refreshing={isLoading}
@@ -151,12 +168,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    backgroundColor: '#007AFF',
     padding: 15,
   },
   logo: {
     width: 100,
     height: 60,
     resizeMode: 'contain',
+  },
+  refreshButton: {
+    padding: 10,
   },
   headlineItem: {
     padding: 15,
@@ -166,6 +187,16 @@ const styles = StyleSheet.create({
   },
   pinnedItem: {
     backgroundColor: '#e6f3ff',
+  },
+  pinnedIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  pinnedText: {
+    fontSize: 12,
+    color: '#007AFF',
+    marginLeft: 5,
   },
   headlineTop: {
     flexDirection: 'row',
@@ -191,44 +222,58 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
   },
-  headlineTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
   headlineBottom: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+  },
+  headlineContent: {
+    flex: 1,
+    marginRight: 10,
+  },
+  headlineTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 5,
   },
   authorName: {
     fontSize: 12,
     color: '#666',
   },
   newsImage: {
-    width: 50,
-    height: 50,
+    width: 60,
+    height: 60,
     borderRadius: 5,
   },
   rightActions: {
-    flexDirection: 'row',
-  },
-  deleteAction: {
-    backgroundColor: 'red',
+    flexDirection: 'column',
     justifyContent: 'center',
     alignItems: 'center',
     width: 70,
   },
-  pinAction: {
-    backgroundColor: 'green',
+  actionButton: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    width: 70,
+    width: '100%',
+  },
+  deleteButton: {
+    backgroundColor: '#007AFF',
+  },
+  pinButton: {
+    backgroundColor: '#34C759',
+  },
+  actionIcon: {
+    fontSize: 24,
+    color: 'white',
   },
   actionText: {
     color: 'white',
-    fontWeight: 'bold',
-    padding: 10,
+    fontSize: 12,
+    marginTop: 5,
+  },
+  pinnedIcon: {
+    fontSize: 16,
+    marginRight: 5,
   },
   centerContainer: {
     flex: 1,
@@ -241,12 +286,12 @@ const styles = StyleSheet.create({
     color: 'red',
     marginBottom: 20,
   },
-  refreshButton: {
-    padding: 10,
-  },
   refreshIcon: {
     fontSize: 24,
-    color: '#484a48',
+    color: 'white',
+  },
+  placeholderImage: {
+    backgroundColor: '#e1e4e8',
   },
 });
 

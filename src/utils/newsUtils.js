@@ -11,13 +11,16 @@ const axiosInstance = axios.create({
 });
 
 export const fetchNews = async () => {
+  const today = new Date().toISOString().split('T')[0];
   try {
     const response = await axiosInstance.post(API_URL, {}, {
       params: {
         endpoint: 'everything',
         q: 'tesla OR apple OR google',
+        // from: today,
         from: '2024-10-13',
         sortBy: 'publishedAt',
+        language: 'en',
         apiKey: '03d30eb2b7454b4da64774d67518c221'
       }
     });
