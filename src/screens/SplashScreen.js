@@ -4,21 +4,21 @@ import { View, Image, StyleSheet } from 'react-native';
 const SplashScreen = ({ navigation }) => {
   useEffect(() => {
     setTimeout(() => {
-      navigation.replace('NewsFeed');
+      navigation?.replace('NewsFeed');
     }, 2000);
   }, []);
 
   return (
     <View style={styles.container}>
       <Image
-        source={require('../assets/logo.png')}
+        source={{uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT6ErXslxNBqSl59aj-Eu-HSQkP9A6ePPJCjA&s"}}
         style={styles.logo}
       />
     </View>
   );
 };
 
-const styles = StyleSheet.css({
+const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
