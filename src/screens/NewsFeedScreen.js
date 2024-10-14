@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
-import { getStoredNews } from '../utils/newsUtils';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { FlatList, RectButton, Swipeable } from 'react-native-gesture-handler';
+import { getStoredNews, storeNews } from '../utils/newsUtils';
 
 const NewsFeedScreen = () => {
   const [teslaHeadlines, setTeslaHeadlines] = useState([]);
   const [appleHeadlines, setAppleHeadlines] = useState([]);
   const [currentFeed, setCurrentFeed] = useState('tesla');
   const [displayedHeadlines, setDisplayedHeadlines] = useState([]);
+  const [pinnedHeadlines, setPinnedHeadlines] = useState([]);
 
   useEffect(() => {
     const loadInitialHeadlines = async () => {
@@ -22,8 +24,8 @@ const NewsFeedScreen = () => {
   const addNewHeadlines = useCallback(() => {
     const currentHeadlines = currentFeed === 'tesla' ? teslaHeadlines : appleHeadlines;
     const newHeadlines = currentHeadlines.slice(displayedHeadlines.length, displayedHeadlines.length + 5);
-    setDisplayedHeadlines(prevHeadlines => [...newHeadlines, ...prevHeadlines]);
-  }, [currentFeed, teslaHeadlines, appleHeadlines, displayedHeadlines]);
+    setDisplayedHeadlines(prevHeadlines => [...pinnedHeadlines, ...newHeadlines, ...prevHeadlines.filter(h => !pinnedHeadlines.includes(h))]);
+  }, [currentFeed, teslaHeadlines, appleHeadlines, displayedHeadlines, pinnedHeadlines]);
 
   useEffect(() => {
     const timer = setInterval(addNewHeadlines, 10000);
@@ -32,13 +34,45 @@ const NewsFeedScreen = () => {
 
   const handleFeedChange = (feed) => {
     setCurrentFeed(feed);
-    setDisplayedHeadlines(feed === 'tesla' ? teslaHeadlines.slice(0, 10) : appleHeadlines.slice(0, 10));
+    const headlines = feed === 'tesla' ? teslaHeadlines : appleHeadlines;
+    setDisplayedHeadlines([...pinnedHeadlines, ...headlines.slice(0, 10 - pinnedHeadlines.length)]);
+  };
+
+  const deleteHeadline = (headline) => {
+    setDisplayedHeadlines(prevHeadlines => prevHeadlines.filter(h => h !== headline));
+    if (currentFeed === 'tesla') {
+      setTeslaHeadlines(prevHeadlines => prevHeadlines.filter(h => h !== headline));
+    } else {
+      setAppleHeadlines(prevHeadlines => prevHeadlines.filter(h => h !== headline));
+    }
+  };
+
+  const pinHeadline = (headline) => {
+    if (!pinnedHeadlines.includes(headline)) {
+      setPinnedHeadlines(prevPinned => [headline, ...prevPinned]);
+      setDisplayedHeadlines(prevHeadlines => [headline, ...prevHeadlines.filter(h => h !== headline)]);
+    }
+  };
+
+  const renderRightActions = (headline) => {
+    return (
+      <View style={styles.rightActions}>
+        <RectButton style={styles.deleteAction} onPress={() => deleteHeadline(headline)}>
+          <Text style={styles.actionText}>Delete</Text>
+        </RectButton>
+        <RectButton style={styles.pinAction} onPress={() => pinHeadline(headline)}>
+          <Text style={styles.actionText}>Pin</Text>
+        </RectButton>
+      </View>
+    );
   };
 
   const renderItem = ({ item }) => (
-    <View style={styles.headlineItem}>
-      <Text style={styles.headlineTitle}>{item.title}</Text>
-    </View>
+    <Swipeable renderRightActions={() => renderRightActions(item)}>
+      <View style={[styles.headlineItem, pinnedHeadlines.includes(item) && styles.pinnedItem]}>
+        <Text style={styles.headlineTitle}>{item.title || '[Removed]'}</Text>
+      </View>
+    </Swipeable>
   );
 
   return (
@@ -94,6 +128,10 @@ const styles = StyleSheet.create({
     padding: 15,
     borderBottomWidth: 1,
     borderBottomColor: '#ccc',
+    backgroundColor: 'white',
+  },
+  pinnedItem: {
+    backgroundColor: '#e6f3ff',
   },
   headlineTitle: {
     fontSize: 16,
@@ -109,6 +147,26 @@ const styles = StyleSheet.create({
   refreshButtonText: {
     color: 'white',
     fontWeight: 'bold',
+  },
+  rightActions: {
+    flexDirection: 'row',
+  },
+  deleteAction: {
+    backgroundColor: 'red',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 70,
+  },
+  pinAction: {
+    backgroundColor: 'green',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 70,
+  },
+  actionText: {
+    color: 'white',
+    fontWeight: 'bold',
+    padding: 10,
   },
 });
 
