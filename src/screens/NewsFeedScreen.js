@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { getStoredNews } from '../utils/newsUtils';
 
@@ -6,17 +6,34 @@ const NewsFeedScreen = () => {
   const [teslaHeadlines, setTeslaHeadlines] = useState([]);
   const [appleHeadlines, setAppleHeadlines] = useState([]);
   const [currentFeed, setCurrentFeed] = useState('tesla');
+  const [displayedHeadlines, setDisplayedHeadlines] = useState([]);
 
   useEffect(() => {
     const loadInitialHeadlines = async () => {
       const storedTeslaNews = await getStoredNews('teslaNews');
-      setTeslaHeadlines(storedTeslaNews.slice(0, 10));
-
       const storedAppleNews = await getStoredNews('appleNews');
-      setAppleHeadlines(storedAppleNews.slice(0, 10));
+      setTeslaHeadlines(storedTeslaNews);
+      setAppleHeadlines(storedAppleNews);
+      setDisplayedHeadlines(storedTeslaNews.slice(0, 10));
     };
     loadInitialHeadlines();
   }, []);
+
+  const addNewHeadlines = useCallback(() => {
+    const currentHeadlines = currentFeed === 'tesla' ? teslaHeadlines : appleHeadlines;
+    const newHeadlines = currentHeadlines.slice(displayedHeadlines.length, displayedHeadlines.length + 5);
+    setDisplayedHeadlines(prevHeadlines => [...newHeadlines, ...prevHeadlines]);
+  }, [currentFeed, teslaHeadlines, appleHeadlines, displayedHeadlines]);
+
+  useEffect(() => {
+    const timer = setInterval(addNewHeadlines, 10000);
+    return () => clearInterval(timer);
+  }, [addNewHeadlines]);
+
+  const handleFeedChange = (feed) => {
+    setCurrentFeed(feed);
+    setDisplayedHeadlines(feed === 'tesla' ? teslaHeadlines.slice(0, 10) : appleHeadlines.slice(0, 10));
+  };
 
   const renderItem = ({ item }) => (
     <View style={styles.headlineItem}>
@@ -29,22 +46,25 @@ const NewsFeedScreen = () => {
       <View style={styles.buttonContainer}>
         <TouchableOpacity
           style={[styles.button, currentFeed === 'tesla' && styles.activeButton]}
-          onPress={() => setCurrentFeed('tesla')}
+          onPress={() => handleFeedChange('tesla')}
         >
           <Text style={styles.buttonText}>Tesla News</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.button, currentFeed === 'apple' && styles.activeButton]}
-          onPress={() => setCurrentFeed('apple')}
+          onPress={() => handleFeedChange('apple')}
         >
           <Text style={styles.buttonText}>Apple News</Text>
         </TouchableOpacity>
       </View>
       <FlatList
-        data={currentFeed === 'tesla' ? teslaHeadlines : appleHeadlines}
+        data={displayedHeadlines}
         renderItem={renderItem}
-        keyExtractor={(item) => item.title}
+        keyExtractor={(item, index) => `${item.title}-${index}`}
       />
+      <TouchableOpacity style={styles.refreshButton} onPress={addNewHeadlines}>
+        <Text style={styles.refreshButtonText}>Refresh</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -77,6 +97,17 @@ const styles = StyleSheet.create({
   },
   headlineTitle: {
     fontSize: 16,
+    fontWeight: 'bold',
+  },
+  refreshButton: {
+    backgroundColor: '#007AFF',
+    padding: 10,
+    alignItems: 'center',
+    margin: 10,
+    borderRadius: 5,
+  },
+  refreshButtonText: {
+    color: 'white',
     fontWeight: 'bold',
   },
 });
